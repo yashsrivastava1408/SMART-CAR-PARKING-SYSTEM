@@ -1,0 +1,108 @@
+#include <Wire.h>
+#include <LiquidCrystal_PCF8574.h>
+#include <Servo.h>
+
+// Initialize the LCD with LiquidCrystal_PCF8574
+LiquidCrystal_PCF8574 lcd(0x27); // Replace 0x27 with your LCD's I2C address
+
+// Define pins
+const int inSensorPin = 2;    // Sensor for entering
+const int outSensorPin = 3;   // Sensor for leaving
+const int servoPin = 9;       // Servo pin
+const int buzzerPin = 8;      // Buzzer pin
+
+Servo gateServo;
+
+int parkingSpots = 4;  // Total number of parking spots
+int inSensorState = LOW;
+int outSensorState = LOW;
+int lastInSensorState = LOW;
+int lastOutSensorState = LOW;
+
+void setup() {
+  pinMode(inSensorPin, INPUT);
+  pinMode(outSensorPin, INPUT);
+  pinMode(buzzerPin, OUTPUT);
+  gateServo.attach(servoPin);
+
+  // Initialize the LCD
+  lcd.begin(16, 2); // Initialize the LCD with 16 columns and 2 rows
+  lcd.setBacklight(255); // Turn on the backlight (if supported)
+  lcd.setCursor(0, 0);
+  lcd.print("Parking Spots: ");
+  lcd.setCursor(0, 1);
+  lcd.print(parkingSpots);
+
+  Serial.begin(9600);
+}
+
+void loop() {
+  inSensorState = digitalRead(inSensorPin);
+  outSensorState = digitalRead(outSensorPin);
+
+  if (inSensorState == HIGH && lastInSensorState == LOW) {
+    // Car is entering
+    if (parkingSpots > 0) {
+      gateServo.write(90); // Open the gate
+      Serial.println("Gate Open");
+      delay(5000); // Allow time for car to enter
+      gateServo.write(0); // Close the gate
+      Serial.println("Gate Closed");
+
+      parkingSpots--;
+      lcd.setCursor(0, 1);
+      lcd.print("                "); // Clear previous count
+      lcd.setCursor(0, 1);
+      lcd.print(parkingSpots);
+    } else {
+      // Parking full
+      lcd.setCursor(0, 0);
+      lcd.print("Parking Full     ");
+      Serial.println("Parking Full");
+      blinkBuzzer(); // Activate buzzer
+    }
+  }
+
+  if (outSensorState == HIGH && lastOutSensorState == LOW) {
+    // Car is leaving
+    gateServo.write(90); // Open the gate
+    Serial.println("Gate Open");
+    delay(3000); // Allow time for car to leave
+    gateServo.write(0); // Close the gate
+    Serial.println("Gate Closed");
+
+    parkingSpots++;
+    lcd.setCursor(0, 1);
+    lcd.print("                "); // Clear previous count
+    lcd.setCursor(0, 1);
+    lcd.print(parkingSpots);
+
+    // Remove "Parking Full" if a spot becomes available
+    lcd.setCursor(0, 0);
+    lcd.print("Parking Spots: ");
+    Serial.println("Spot Available");
+  }
+
+  // Save the current state as the last state for the next loop
+  lastInSensorState = inSensorState;
+  lastOutSensorState = outSensorState;
+
+  // Debugging information
+  Serial.print("In Sensor: ");
+  Serial.print(inSensorState);
+  Serial.print("  Out Sensor: ");
+  Serial.print(outSensorState);
+  Serial.print("  Parking Spots: ");
+  Serial.println(parkingSpots);
+
+  delay(100); // Small delay to avoid bouncing issues
+}
+
+void blinkBuzzer() {
+  for (int i = 0; i < 5; i++) { // Blink 5 times for parking full indication
+    digitalWrite(buzzerPin, HIGH);
+    delay(400); // 0.4 seconds
+    digitalWrite(buzzerPin, LOW);
+    delay(400); // 0.4 seconds
+  }
+}
