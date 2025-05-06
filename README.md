@@ -13,3 +13,4 @@ Users can access detailed power usage insights through a simple and intuitive we
 This project is ideal for smart homes, institutions, and small industries aiming to improve energy efficiency and promote sustainable living.
 
 
+![Image](https://github.com/user-attachments/assets/c8e01fa4-1e64-4acc-92bf-974cab24a2a7)
